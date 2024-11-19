@@ -1,5 +1,6 @@
 package telran.employees;
 
+import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 
@@ -23,18 +24,21 @@ public class CompanyProtocol implements Protocol {
         String requestData = request.requestData();
         Response response = null;
         try {
-            response = switch (requestType) {
-                case "addEmployee" -> addEmployee(requestData);
-                case "getEmployee" -> getEmployee(requestData);
-                case "removeEmployee" -> removeEmployee(requestData);
-                case "getDepartmentBudget" -> getDepartmentBudget(requestData);
-                case "getDepartments" -> getDepartments(requestData);
-                case "getManagersWithMostFactor" -> getManagersWithMostFactor(requestData);
-                default -> new Response(ResponseCode.WRONG_TYPE, requestType + " Wrong type");
-            };
-        } catch (Exception e) {
-            response = new Response(ResponseCode.WRONG_DATA, e.getMessage());
+            Method method = CompanyProtocol.class.getDeclaredMethod(requestType, String.class);
+            method.setAccessible(true);
+            response = (Response) method.invoke(this, requestData);
+        } catch (NoSuchMethodException e) {
+            response = new Response(ResponseCode.WRONG_TYPE, requestType + " Wrong type");
+           
+        } catch (InvocationTargetException e) {
+            Throwable causeExc = e.getCause();
+            String message = causeExc == null ? e.getMessage() : causeExc.getMessage();
+            response = new Response(ResponseCode.WRONG_DATA, message);
+        } catch (Exception e){
+            //only for finishing Server and printing out Exception full stack
+            throw new RuntimeException(e);
         }
+       
         return response;
     }
 
